@@ -65,30 +65,26 @@ buyerPeer = I.do
           Recv (OneDate d) <- await
           yield (OneSuccess d)
           returnAt $ Just d
-        OTTwo -> I.do
-          yield (PriceToBuyer2 i)
-          await I.>>= \case   
-          -- await ::  Peer Role BookSt 'Buyer IO (Recv Role BookSt 'Buyer ('S6 Any)) ('S6 Any)
-
-          -- The type of message received by await is:  Recv Role BookSt 'Buyer ('S6 Any) Any
-          -- Pattern match it, (Recv NotSupport1), (Recv (SupportVal h)) is suitable.
-          -- But here ghc generates wrong warnings and seems to fail to perform pattern matching checks correctly.
-            Recv NotSupport1 -> I.do
-            -- (Recv NotSupport1)    :: Recv Role BookSt 'Buyer  (S6 '[NotSupport, Two, Found]) (S3 '[NotSupport, Two, Found])
-              yield TwoNotBuy
-              returnAt Nothing
-            Recv (SupportVal h) -> I.do
-            --  (Recv (SupportVal h)) :: Recv Role BookSt 'Buyer (S6 '[Support, Two, Found]) '(S3 s)
-              checkPrice i h I.>>= \case
-                Yes -> I.do
-                  yield TwoAccept
-                  Recv (TwoDate d) <- await
-                  yield (TwoSuccess d)
-                  returnAt (Just d)
-                No -> I.do
-                  yield TwoNotBuy1
-                  yield TwoFailed
-                  returnAt Nothing
+        OTTwo ->  f1 
+            where 
+              f1 :: Peer Role BookSt 'Buyer IO (At (Maybe Date) 'End) ('S1 '[ 'Two, 'Found])
+              f1 = I.do
+                      yield (PriceToBuyer2 300)
+                      await I.>>= \case   
+                        Recv NotSupport1 -> I.do
+                          yield TwoNotBuy
+                          returnAt Nothing
+                        Recv (SupportVal h) -> I.do
+                          checkPrice 10 h I.>>= \case
+                            Yes -> I.do
+                              yield TwoAccept
+                              Recv (TwoDate d) <- await
+                              yield (TwoSuccess d)
+                              returnAt (Just d)
+                            No -> I.do
+                              yield TwoNotBuy1
+                              yield TwoFailed
+                              returnAt Nothing
 
 data BuySupp :: BookSt -> Type where
   BNS :: BuySupp (S6 '[NotSupport, Two, Found])
